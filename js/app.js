@@ -65,7 +65,7 @@ function dots(entry){
 function render(){
   if(welcome){root.innerHTML=renderWelcome();translateTree(root);return;}
   const view=child?childView():page==='today'?today():page==='diary'?diary():page==='stats'?stats():settings();
-  root.innerHTML=`<div class="shell"><header><div class="brand"><img src="icon.svg" alt=""><div>PACOS WEG<small>Schritt für Schritt selbstständig.</small></div></div>
+  root.innerHTML=`<div class="shell"><header><div class="brand"><img src="icon.png" alt=""><div>PACOS WEG<small>Schritt für Schritt selbstständig.</small></div></div>
     <div class="account">${languageSwitcher()}${cloud&&!child?`<span class="profile-name">${esc(state.parent)}</span>`:''}${!cloud&&!child?button('welcome-home','Startseite','small'):''}${!child?button(cloud?'logout':'login',cloud?'Abmelden':'Eltern anmelden','small'):''}${child&&cloud?button('child-home','Startseite','small'):''}${button(child?'exit':'child',child?'Elternbereich ↗':'Pacos Ansicht ☀','small')}</div></header>
     ${view}<p class="demo">${cloud?child?'PACOS ANSICHT · ELTERNBEREICH GESPERRT':'FAMILIENDATENBANK · '+esc(state.parent):'DEMO · ERFUNDENE BEISPIELDATEN'}</p></div>
     ${child?'':`<nav class="nav" aria-label="Hauptnavigation">${[['today','⌂','Heute'],['diary','▤','Tagebuch'],['stats','▥','Statistik'],['settings','⚙','Einstellungen']].map(([id,icon,name])=>`<button data-page="${id}" class="${id===page?'active':''}" ${id===page?'aria-current="page"':''}><b aria-hidden="true">${icon}</b>${name}</button>`).join('')}</nav>`}`;

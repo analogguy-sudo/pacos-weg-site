@@ -1,0 +1,22 @@
+{
+  "id": "./",
+  "name": "Pacos Weg in die Selbstständigkeit",
+  "short_name": "Pacos Weg",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef4ee",
+  "theme_color": "#eef4ee",
+  "icons": [
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    }
+  ]
+}

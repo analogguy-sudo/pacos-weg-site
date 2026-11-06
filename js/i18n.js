@@ -7,12 +7,14 @@ const upper=new Map(Object.entries(spanish).map(([de,es])=>[de.toLocaleUpperCase
 const phrases=Object.keys(spanish).filter(s=>s.length>25).sort((a,b)=>b.length-a.length);
 export const getLanguage=()=>language;
 export const getLocale=()=>language==='es'?'es-ES':'de-DE';
+// Öffnet nur auf Klick den Google Übersetzer; die Zielsprache folgt der gewählten Oberfläche.
+export const translationUrl=(text,target=language)=>`https://translate.google.com/?sl=auto&tl=${target==='es'?'es':'de'}&op=translate&text=${encodeURIComponent(text)}`;
 export function setLanguage(value){
  language=value==='es'?'es':'de';
  try{globalThis.localStorage?.setItem(key,language);}catch{}
  if(typeof document!=='undefined'){document.documentElement.lang=language;document.title=translateText('Pacos Weg in die Selbstständigkeit');}
 }
-// Traducción local de textos de interfaz. Nunca se envían notas a un servicio de traducción.
+// Traducción local de textos de interfaz. Las notas solo salen de la app si se pulsa «Übersetzen».
 export function translateText(source,target=language){
  if(target!=='es'||typeof source!=='string')return source;
  const value=source.trim();if(!value)return source;

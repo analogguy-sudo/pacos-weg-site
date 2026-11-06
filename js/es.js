@@ -103,6 +103,8 @@ export const spanish = {
   "Filter zurücksetzen": "Restablecer filtros",
   "Öffnen": "Abrir",
   "Keine zusätzlichen Beobachtungen.": "Sin observaciones adicionales.",
+  "Übersetzen": "Traducir",
+  "Öffnet die Notiz im Google Übersetzer": "Abre la nota en el Traductor de Google",
   "Noch keine Einträge für diese Auswahl.": "Todavía no hay entradas para esta selección.",
   "Grün: selbstständig · Gelb: mit Unterstützung · Rot: noch nicht · Grau: nicht beobachtet. Die Einzelbewertungen stehen im Eintrag.": "Verde: sin ayuda · Amarillo: con ayuda · Rojo: todavía no · Gris: no observado. Las valoraciones se encuentran en cada entrada.",
   "Entwicklung verstehen": "Comprender los avances",

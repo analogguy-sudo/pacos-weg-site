@@ -14,6 +14,8 @@ let modules=structuredClone(moduleDefinitions), state={entries:[],parent:'',phas
 let page='today', selectedModule='school', selectedGroup='', selectedTask='';
 let filters={parent:'',from:'',to:''}, busy=false, trainingBusy=false, loginBusy=false, toastTimer;
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Installierte Apps geben Adressen außerhalb ihres Bereichs selbst an den Browser; im Browser-Tab bleibt die App mit neuem Tab geöffnet.
+const externalTarget=()=>globalThis.navigator?.standalone||globalThis.matchMedia?.('(display-mode: standalone)').matches?'':' target="_blank"';
 const button=(action,text,css='')=>`<button class="${css}" data-action="${action}">${text}</button>`;
 const exerciseCount=n=>`${n} ${n===1?'Übung':'Übungen'}`;
 const fmt=date=>new Date(date+'T12:00:00').toLocaleDateString(getLocale(),{day:'numeric',month:'short',year:'numeric'});
@@ -88,7 +90,7 @@ function diary(){
   return `<div class="intro"><span class="eyebrow">Gemeinsame Schritte festhalten</span><div class="row"><h1>Tagebuch</h1>${button('new','+ Übung','primary')}</div></div>${scopePicker()}
     <div class="filters"><label>Begleitperson<select data-filter="parent"><option value="">Alle</option>${['Mama','Papa'].map(p=>`<option ${filters.parent===p?'selected':''}>${p}</option>`).join('')}</select></label><label>Von<input type="date" data-filter="from" value="${filters.from}"></label><label>Bis<input type="date" data-filter="to" value="${filters.to}"></label></div>
     <div class="card"><div class="row"><h2>${exerciseCount(list.length)} · ${esc(m.name)}</h2>${button('clear-filters','Filter zurücksetzen','small')}</div>
-    ${list.length?list.map(e=>`<article class="entry"><div class="row"><div><h3>${fmt(e.date)} · ${esc(e.time)}</h3><span class="muted">${esc(e.parent)} · ${esc(groupName(m,e.groupId))}${m.hasPhases?' · Woche '+(e.phase+1):''}</span></div>${button('edit:'+e.id,'Öffnen','small')}</div>${dots(e)}<p class="muted">${e.note?`<span data-original>${esc(e.note)}</span> <a class="note-translate" href="${esc(translationUrl(e.note))}" target="_blank" rel="noopener noreferrer" title="Öffnet die Notiz im Google Übersetzer">Übersetzen</a>`:'Keine zusätzlichen Beobachtungen.'}</p></article>`).join(''):'<p class="empty">Noch keine Einträge für diese Auswahl.</p>'}</div>
+    ${list.length?list.map(e=>`<article class="entry"><div class="row"><div><h3>${fmt(e.date)} · ${esc(e.time)}</h3><span class="muted">${esc(e.parent)} · ${esc(groupName(m,e.groupId))}${m.hasPhases?' · Woche '+(e.phase+1):''}</span></div>${button('edit:'+e.id,'Öffnen','small')}</div>${dots(e)}<p class="muted">${e.note?`<span data-original>${esc(e.note)}</span> <a class="note-translate" href="${esc(translationUrl(e.note))}"${externalTarget()} rel="noopener noreferrer" title="Öffnet die Notiz im Google Übersetzer">Übersetzen</a>`:'Keine zusätzlichen Beobachtungen.'}</p></article>`).join(''):'<p class="empty">Noch keine Einträge für diese Auswahl.</p>'}</div>
     <p class="note">Grün: selbstständig · Gelb: mit Unterstützung · Rot: noch nicht · Grau: nicht beobachtet. Die Einzelbewertungen stehen im Eintrag.</p>`;
 }
 function bar(name,result){

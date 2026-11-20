@@ -15,17 +15,56 @@ export class FamilyRepository {
     this.switching = false;
   }
 
-  async auth(path, body, token) {
+  async authRequest(path, body, token, method = 'POST') {
     const response = await this.request(`${this.config.url}/auth/v1/${path}`, {
-      method: 'POST',
+      method,
       cache: 'no-store',
       signal: AbortSignal.timeout(15000),
       headers: { apikey: this.config.publishableKey, 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    const data = await response.json().catch(() => null);
+    return { response, data: await response.json().catch(() => null) };
+  }
+
+  async auth(path, body, token) {
+    const { response, data } = await this.authRequest(path, body, token);
     if (!response.ok) throw new Error('Anmeldung fehlgeschlagen. Bitte Zugangsdaten und Verbindung prüfen.');
     return data;
+  }
+
+  // Supabase antwortet auch bei unbekannten Adressen erfolgreich; so bleibt verborgen, welche Konten existieren.
+  async requestPasswordReset(email, redirectTo) {
+    let response;
+    try { ({ response } = await this.authRequest(`recover?redirect_to=${encodeURIComponent(redirectTo)}`, { email })); }
+    catch { throw new Error('Die E-Mail konnte nicht angefordert werden. Bitte Verbindung prüfen.'); }
+    if (response.status === 429) throw new Error('Zu viele Anfragen. Bitte in ein paar Minuten erneut versuchen.');
+    if (!response.ok) throw new Error('Die E-Mail konnte nicht angefordert werden. Bitte Verbindung prüfen.');
+  }
+
+  // Der Zugang aus dem E-Mail-Link dient nur zum Passwortwechsel und wird danach beendet.
+  async recoveryToken(link) {
+    if (link.accessToken) return link.accessToken;
+    const invalid = 'Der Link ist ungültig oder abgelaufen. Bitte unter „Passwort vergessen?“ einen neuen anfordern.';
+    let result;
+    try { result = await this.authRequest('verify', { type: 'recovery', token_hash: link.tokenHash }); }
+    catch { throw new Error('Keine Verbindung. Bitte erneut versuchen.'); }
+    if (!result.response.ok || !result.data?.access_token) throw new Error(invalid);
+    return result.data.access_token;
+  }
+
+  async updatePassword(token, password) {
+    let result;
+    try { result = await this.authRequest('user', { password }, token, 'PUT'); }
+    catch { throw new Error('Keine Verbindung. Bitte erneut versuchen.'); }
+    if (!result.response.ok) {
+      const code = result.data?.error_code ?? result.data?.code;
+      if (code === 'same_password') throw new Error('Das neue Passwort muss sich vom bisherigen unterscheiden.');
+      if (code === 'weak_password') throw new Error('Das Passwort ist zu schwach. Bitte ein längeres wählen.');
+      if (result.response.status === 401 || result.response.status === 403) throw new Error('Der Link ist ungültig oder abgelaufen. Bitte unter „Passwort vergessen?“ einen neuen anfordern.');
+      throw new Error('Das Passwort konnte nicht gespeichert werden. Bitte erneut versuchen.');
+    }
+    try { await this.authRequest('logout?scope=local', undefined, token); }
+    catch { /* Das Token liegt nur im Arbeitsspeicher und verfällt von selbst. */ }
   }
 
   async login(email, password) {

@@ -1,5 +1,6 @@
 import {taskRewards,rememberDemoAwards,demoRewardRules} from './rewards.js';
 import {getLanguage,getLocale,setLanguage,translateText,translateTree,translationUrl,languageSwitcher} from './i18n.js';
+import {parseRecoveryLink,cleanRecoveryUrl} from './recovery.js';
 import {ChildAccess} from './child-access.js';
 import {renderWelcome} from './welcome.js';
 import {renderChildSummary, safeChildSummary} from './child-view.js';
@@ -238,8 +239,9 @@ function openPinSetup(){
  };showDialog(gate);
 }
 function openLogin(){
-  gate.innerHTML='<form><h2>Eltern anmelden</h2><p class="muted">Mit eurem eingerichteten Elternkonto. Es gibt keine öffentliche Registrierung.</p><label>E-Mail<input required type="email" name="email" autocomplete="username"></label><label class="form-spaced">Passwort<input required type="password" name="password" autocomplete="current-password"></label><p class="note">Nach Neuladen bitte erneut anmelden.</p><p id="login-error" role="alert"></p><div class="actions"><button type="button" id="cancel-login">Abbrechen</button><button type="submit" class="primary">Anmelden</button></div></form>';
+  gate.innerHTML='<form><h2>Eltern anmelden</h2><p class="muted">Mit eurem eingerichteten Elternkonto. Es gibt keine öffentliche Registrierung.</p><label>E-Mail<input required type="email" name="email" autocomplete="username"></label><label class="form-spaced">Passwort<input required type="password" name="password" autocomplete="current-password"></label><p class="note">Nach Neuladen bitte erneut anmelden.</p><button type="button" class="demo-link" id="forgot-password">Passwort vergessen?</button><p id="login-error" role="alert"></p><div class="actions"><button type="button" id="cancel-login">Abbrechen</button><button type="submit" class="primary">Anmelden</button></div></form>';
   gate.querySelector('#cancel-login').onclick=()=>{gate.close();gate.innerHTML='';};
+  gate.querySelector('#forgot-password').onclick=()=>openForgotPassword(gate.querySelector('[name=email]').value.trim());
   gate.querySelector('form').onsubmit=async event=>{
     event.preventDefault();const data=new FormData(event.target);loginBusy=true;
     gate.querySelectorAll('button').forEach(b=>b.disabled=true);gate.querySelector('#login-error').textContent='';
@@ -249,6 +251,38 @@ function openLogin(){
       welcome=false;page='today';selectedGroup='';selectedTask='';
       gate.close();gate.innerHTML='';render();toast('Hallo, '+state.parent+'!');
     }catch(error){gate.querySelector('#login-error').textContent=error.message;translateTree(gate);}
+    finally{loginBusy=false;gate.querySelectorAll('button').forEach(b=>b.disabled=false);}
+  };showDialog(gate);
+}
+function openForgotPassword(email=''){
+  gate.innerHTML='<form><h2>Passwort zurücksetzen</h2><p class="muted">Wir schicken dir einen Link, mit dem du ein neues Passwort festlegst.</p><label>E-Mail<input required type="email" name="email" autocomplete="username"></label><p id="forgot-error" role="alert"></p><div class="actions"><button type="button" id="back-to-login">Zurück zur Anmeldung</button><button type="submit" class="primary">Link senden</button></div></form>';
+  gate.querySelector('[name=email]').value=email;
+  gate.querySelector('#back-to-login').onclick=()=>openLogin();
+  gate.querySelector('form').onsubmit=async event=>{
+    event.preventDefault();const data=new FormData(event.target);loginBusy=true;
+    gate.querySelectorAll('button').forEach(b=>b.disabled=true);gate.querySelector('#forgot-error').textContent='';
+    try{
+      await repository.requestPasswordReset(data.get('email').trim(),location.origin+location.pathname);
+      gate.querySelector('form').innerHTML='<h2>Passwort zurücksetzen</h2><p>Falls zu dieser E-Mail ein Elternkonto besteht, ist der Link unterwegs. Bitte auch im Spam-Ordner nachsehen.</p><div class="actions"><button type="button" id="back-to-login" class="primary">Zurück zur Anmeldung</button></div>';
+      gate.querySelector('#back-to-login').onclick=()=>openLogin();translateTree(gate);
+    }catch(error){gate.querySelector('#forgot-error').textContent=error.message;translateTree(gate);}
+    finally{loginBusy=false;gate.querySelectorAll('button').forEach(b=>b.disabled=false);}
+  };showDialog(gate);
+}
+function openNewPassword(link){
+  if(link.invalid){openLogin();gate.querySelector('#login-error').textContent='Der Link ist ungültig oder abgelaufen. Bitte unter „Passwort vergessen?“ einen neuen anfordern.';translateTree(gate);return;}
+  let token=null;
+  gate.innerHTML='<form><h2>Neues Passwort festlegen</h2><p class="muted">Gilt für alle eure Apps mit diesem Konto.</p><label>Neues Passwort<input required type="password" name="password" minlength="8" autocomplete="new-password"></label><label class="form-spaced">Neues Passwort wiederholen<input required type="password" name="repeat" minlength="8" autocomplete="new-password"></label><p class="note">Mindestens 8 Zeichen.</p><p id="new-password-error" role="alert"></p><div class="actions"><button type="button" id="cancel-new-password">Abbrechen</button><button type="submit" class="primary">Speichern</button></div></form>';
+  gate.querySelector('#cancel-new-password').onclick=()=>{gate.close();gate.innerHTML='';};
+  gate.querySelector('form').onsubmit=async event=>{
+    event.preventDefault();const data=new FormData(event.target),error=gate.querySelector('#new-password-error');
+    if(data.get('password')!==data.get('repeat')){error.textContent='Die beiden Passwörter stimmen nicht überein.';translateTree(gate);return;}
+    loginBusy=true;gate.querySelectorAll('button').forEach(b=>b.disabled=true);error.textContent='';
+    try{
+      token??=await repository.recoveryToken(link);
+      await repository.updatePassword(token,data.get('password'));
+      loginBusy=false;openLogin();toast('Neues Passwort gespeichert. Bitte jetzt damit anmelden.');
+    }catch(failure){error.textContent=failure.message;translateTree(gate);}
     finally{loginBusy=false;gate.querySelectorAll('button').forEach(b=>b.disabled=false);}
   };showDialog(gate);
 }
@@ -332,3 +366,5 @@ document.addEventListener('click',async event=>{
 });
 setLanguage(getLanguage());
 render();
+const recoveryLink=parseRecoveryLink(location.href);
+if(recoveryLink){history.replaceState(null,'',cleanRecoveryUrl(location.href));openNewPassword(recoveryLink);}
